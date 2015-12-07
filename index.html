@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>hello phaser!</title>
+        <script src="phaser.js"></script>
+        
+        
+    </head>
+    <body>
+    <script type="text/javascript">
+var game;
+var selectedObject=null;
+var lastUpdateTime;
+var maxVelocity=2;
+var frigateScale=0.4;
+var bulletScale=0.5;
+
+var screenPercen=0.98;
+
+window.onload = function() {
+game = new Phaser.Game(window.innerWidth*screenPercen, window.innerHeight*screenPercen, Phaser.AUTO, '', { preload: preload, create: create, update:update },false,false);
+
+function preload() {
+    game.load.image('cruiserBlue', 'assets/sprites/cruiserBlue.png');
+    game.load.image('cruiserRed', 'assets/sprites/cruiserRed.png');
+    game.load.image('redfrigate', 'assets/sprites/redfighter.png');
+    game.load.image('bluefrigate', 'assets/sprites/bluefighter.png');    
+    game.load.image('bullet', 'assets/sprites/bullet.png');
+}
+
+
+function create() {
+   
+    
+    game.world.setBounds(0, 0, window.innerWidth*screenPercen, window.innerHeight*screenPercen);
+    game.time.advancedTiming = true;
+    
+    	
+    lastUpdateTime=game.time.now;
+    game.physics.startSystem(Phaser.Physics.P2JS);
+    game.physics.p2.setBoundsToWorld(true, true, true, true, false);
+    game.physics.p2.setImpactEvents(true);
+    
+    frigateGroupBlue = game.physics.p2.createCollisionGroup();
+    frigateGroupRed = game.physics.p2.createCollisionGroup();
+    cruiserGroupBlue = game.physics.p2.createCollisionGroup();
+    cruiserGroupRed = game.physics.p2.createCollisionGroup();
+    bulletGroup = game.physics.p2.createCollisionGroup();    
+    
+
+    bullets = game.add.group(); 
+    frigatesBlue = game.add.group();
+    frigatesRed = game.add.group();
+    shields = game.add.group();
+    cruisersBlue = game.add.group();
+    cruisersRed = game.add.group();
+    
+    
+       
+    for (var i = 0; i < 200; i++) {
+        var frigate = frigatesBlue.create(game.rnd.integerInRange(0, window.innerWidth*screenPercen), game.rnd.integerInRange(0, (window.innerHeight*screenPercen)/4), 'bluefrigate');
+        game.physics.p2.enable(frigate);
+        frigate.body.setCollisionGroup(frigateGroupBlue);
+        frigate.body.collides(bulletGroup, frigateContact, this);
+        frigate.inputEnabled = true;
+        frigate.events.onInputDown.add(onDown, this);
+        
+        frigate.shieldActive=false;  
+        frigate.shieldPoints=100;
+        frigate.armorPoints=100;
+        frigate.hullPoints=100; 
+        frigate.shieldCycleTime=1000; 
+        frigate.shieldLastCycleTime=game.time.now;  
+        frigate.concentrateFire=true;    
+        frigate.scale.set(frigateScale , frigateScale );      	               	            
+    }
+    
+           
+    for (var i = 0; i < 200; i++) {
+        var frigate = frigatesRed.create(game.rnd.integerInRange(0, window.innerWidth*screenPercen), game.rnd.integerInRange((window.innerHeight*screenPercen)/1.5, (window.innerHeight*screenPercen)), 'redfrigate');
+        game.physics.p2.enable(frigate);
+        frigate.body.setCollisionGroup(frigateGroupRed);
+        frigate.body.collides(bulletGroup, frigateContact, this);
+        frigate.inputEnabled = true;
+        frigate.events.onInputDown.add(onDown, this);
+        
+        frigate.shieldActive=false;  
+        frigate.shieldPoints=100;
+        frigate.armorPoints=100;
+        frigate.hullPoints=100; 
+        frigate.shieldCycleTime=1000; 
+        frigate.shieldLastCycleTime=game.time.now;  
+        frigate.concentrateFire=true; 
+        frigate.scale.set(frigateScale , frigateScale);      	            
+        //frigate.body.onBeginContact.add(bulletContact, this);
+        //frigates        
+    }
+    
+    
+    
+    cursors = game.input.keyboard.createCursorKeys();
+   for (var i = 0; i < 2; i++) {
+    var ship = cruisersBlue.create(game.rnd.integerInRange(0, window.innerWidth*screenPercen), game.rnd.integerInRange(0, window.innerHeight*screenPercen), 'cruiserBlue');
+    game.physics.p2.enable(ship,false);
+    ship.body.mass = 1000;
+    ship.body.setCollisionGroup(cruiserGroupBlue);    
+    ship.body.collides(bulletGroup, frigateContact, this);
+    ship.shieldActive=false;  
+    ship.shieldPoints=100;
+    ship.armorPoints=100;
+    ship.hullPoints=100; 
+    ship.shieldCycleTime=1000; 
+    ship.shieldLastCycleTime=game.time.now;    
+    ship.inputEnabled = true;
+    ship.events.onInputDown.add(onDown, this);     	    
+    ship.concentrateFire=false;
+    
+    }
+   for (var i = 0; i < 2; i++) {
+    var ship = cruisersRed.create(game.rnd.integerInRange(0, window.innerWidth*screenPercen), game.rnd.integerInRange(0, window.innerHeight*screenPercen), 'cruiserRed');
+    game.physics.p2.enable(ship,false);
+    ship.body.mass = 1000;
+    ship.body.setCollisionGroup(cruiserGroupRed);    
+    ship.body.collides(bulletGroup, frigateContact, this);
+    ship.shieldActive=false;  
+    ship.shieldPoints=100;
+    ship.armorPoints=100;
+    ship.hullPoints=100; 
+    ship.shieldCycleTime=1000; 
+    ship.shieldLastCycleTime=game.time.now;    
+    ship.inputEnabled = true;
+    ship.events.onInputDown.add(onDown, this);     	    
+    ship.concentrateFire=false;
+    
+    }
+  
+    
+    game.physics.p2.updateBoundsCollisionGroup();
+    
+    fpsText = game.add.text(10, 10, "", { font: '24px Arial', fill: '#fff' });
+    selectTextName = game.add.text(10, 400, "", { font: '24px Arial', fill: '#fff' });
+    selectTextShield = game.add.text(10, 430, "", { font: '24px Arial', fill: '#fff' });
+    selectTextArmor = game.add.text(10, 460, "", { font: '24px Arial', fill: '#fff' });
+    selectTextHull = game.add.text(10, 490, "", { font: '24px Arial', fill: '#fff' });
+
+};
+
+
+
+function update() {
+
+    var timeDelta=game.time.now-lastUpdateTime;
+    fpsText.text = "fps:"+game.time.fps;    
+    if(selectedObject!=null && selectedObject.alive==true){
+    	selectTextName.text= "Type:\t\t\t\t"+selectedObject.key;
+    	selectTextShield.text= "Shield:\t\t\t\t"+Math.round(selectedObject.shieldPoints);
+    	selectTextArmor.text= "Armor:\t\t\t\t"+Math.round(selectedObject.armorPoints);
+    	selectTextHull.text= "Hull:\t\t\t\t"+Math.round(selectedObject.hullPoints);
+    }
+    else{
+    	selectTextName.text= "";
+    	selectTextShield.text= "";
+    	selectTextArmor.text= "";
+    	selectTextHull.text= "";
+    
+    }
+    //selectTextName= "Type:"+selectedObject
+
+    
+    frigatesBlue.forEachAlive(moveFrigates,this);
+    frigatesBlue.forEachAlive(repairShield,this);
+    cruisersBlue.forEachAlive(repairShield,this);
+    frigatesBlue.forEachAlive(frigateFire,this,[frigatesRed,cruisersRed],[cruiserGroupRed,frigateGroupRed],5000,0.25,500);
+    cruisersBlue.forEachAlive(frigateFire,this,[frigatesRed,cruisersRed],[cruiserGroupRed,frigateGroupRed],1000,80,2000);
+    
+    frigatesRed.forEachAlive(moveFrigates,this);
+    frigatesRed.forEachAlive(repairShield,this);
+    cruisersRed.forEachAlive(repairShield,this);
+    frigatesRed.forEachAlive(frigateFire,this,[frigatesBlue,cruisersBlue],[cruiserGroupBlue,frigateGroupBlue],5000,0.25,500);
+    cruisersRed.forEachAlive(frigateFire,this,[frigatesBlue,cruisersBlue],[cruiserGroupBlue,frigateGroupBlue],1000,80,2000);
+
+    
+    bullets.forEachAlive(moveBullet,this);
+    shields.forEach(moveShield,this);
+    	    
+    frigatesBlue.forEachDead(destroy,this);
+    cruisersBlue.forEachDead(destroy,this);
+    frigatesRed.forEachDead(destroy,this);
+    cruisersRed.forEachDead(destroy,this);
+    
+    bullets.forEachDead(destroy,this);
+
+/*
+    if (cursors.left.isDown) {ship.body.rotateLeft(100);}   //ship movement
+    else if (cursors.right.isDown){ship.body.rotateRight(100);}
+    else {ship.body.setZeroRotation();}
+    if (cursors.up.isDown){ship.body.thrust(100400);}
+    else if (cursors.down.isDown){ship.body.reverse(400);}
+  */
+  
+        
+    //find targets
+    /*
+    if(ship.target==null){
+    	ship.target = frigates.getRandom();
+    }
+    else{
+    
+    if (ship.target.alive==true && (ship.lastFire==null || (game.time.now-ship.lastFire)>100)){
+    	    //fire!
+    	    ship.lastFire=game.time.now;	    
+    	    createBullet(ship, ship.target,frigateGroup,80);	    
+	    ship.target = frigates.getRandom();
+    }
+    else {
+    	//find new target    	
+    	ship.target = frigates.getRandom();    
+    }    
+    }
+    */    
+};
+
+
+
+};
+    </script>
+    <script src="objectlib.js"></script>    
+    </body>
+</html>
